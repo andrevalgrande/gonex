@@ -5,10 +5,6 @@ import (
 	"log"
 	"runtime"
 	"time"
-
-	"github.com/b2beauty/az4/transactions"
-
-	"github.com/jinzhu/gorm"
 )
 import "fmt"
 
@@ -17,7 +13,6 @@ type singleton struct {
 	Stack    string
 	Errors   []string
 	Warnings []string
-	Db       *gorm.DB
 }
 
 var instance *singleton = nil
@@ -34,18 +29,21 @@ func getInstance() *singleton {
 	return instance
 }
 
+//appends a textual warning into the exception
 func AppendWarning(warning string) {
 	getInstance()
 	var contents = fmt.Sprintf("Aviso - %v: %v\n", time.Now(), warning)
 	instance.Warnings = append(instance.Warnings, contents)
 }
 
+//appends a native go error into the exception
 func AppendError(err error) {
 	getInstance()
 	var contents = fmt.Sprintf("Erro - %v: %v\n", time.Now(), err)
 	instance.Errors = append(instance.Errors, contents)
 }
 
+//throws an exception with a message. The message will be made into a native go error
 func Throw(message string) {
 	getInstance()
 	AppendError(errors.New(message))
@@ -63,6 +61,8 @@ func getStack() string {
 	return string(stack)
 }
 
+//catches a gone exception and runs the code within the fn parameter
+//MUST be called as a defer
 func Catch(fn func()) {
 	r := recover()
 	if r != nil {
@@ -75,7 +75,8 @@ func Catch(fn func()) {
 	}
 }
 
-
+//gets the warnings and errors in the gone exception as a (poorly) formatted string
+//the "includeStack" parameter allows the method to also return the callstack at the moment of the throw
 func GetString(includeStack bool) (output string) {
 	output = ""
 	for _, warning := range getInstance().Warnings {
@@ -93,7 +94,9 @@ func GetString(includeStack bool) (output string) {
 	return
 }
 
-func GetErrorArray(includeStack bool) (output []error) {
+//gets the warnings and errors in the gone exception as a native error slice
+//the "includeStack" parameter allows the method to also return the callstack at the moment of the throw
+func GetErrorSlice(includeStack bool) (output []error) {
 	getInstance()
 	for _, warning := range instance.Warnings {
 		output = append(output, errors.New(warning))
@@ -109,6 +112,7 @@ func GetErrorArray(includeStack bool) (output []error) {
 	return
 }
 
+//resets the singleton instance, clearing errors and warnings
 func Clear() {
 	resetInstance()
 }
